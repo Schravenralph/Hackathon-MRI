@@ -33,3 +33,61 @@ def test_home_page(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "MRI Platform" in response.text
+
+
+def test_patient_list_empty(client):
+    response = client.get("/patients/")
+    assert response.status_code == 200
+    assert "Patients" in response.text
+
+
+def test_create_and_view_patient(client):
+    response = client.post(
+        "/patients/",
+        data={"name": "John Doe", "age": "55", "notes": "Test patient"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    redirect_url = response.headers["location"]
+    response = client.get(redirect_url)
+    assert response.status_code == 200
+    assert "John Doe" in response.text
+    assert "55" in response.text
+
+
+def test_update_patient(client):
+    response = client.post(
+        "/patients/",
+        data={"name": "Jane Doe", "age": "30"},
+        follow_redirects=False,
+    )
+    redirect_url = response.headers["location"]
+    patient_id = redirect_url.split("/")[-1]
+
+    response = client.post(
+        f"/patients/{patient_id}/edit",
+        data={"name": "Jane Smith", "age": "31"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    response = client.get(f"/patients/{patient_id}")
+    assert "Jane Smith" in response.text
+
+
+def test_delete_patient(client):
+    response = client.post(
+        "/patients/",
+        data={"name": "Delete Me"},
+        follow_redirects=False,
+    )
+    redirect_url = response.headers["location"]
+    patient_id = redirect_url.split("/")[-1]
+
+    response = client.post(
+        f"/patients/{patient_id}/delete", follow_redirects=False
+    )
+    assert response.status_code == 303
+
+    response = client.get(f"/patients/{patient_id}")
+    assert response.status_code == 404

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ patient.name }} — MRI Platform{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>{{ patient.name }}</h1>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="/patients/{{ patient.id }}/edit" role="button" class="outline">Edit</a>
+        <form action="/patients/{{ patient.id }}/delete" method="post" style="margin: 0;"
+              onsubmit="return confirm('Delete {{ patient.name }}? This cannot be undone.');">
+            <button type="submit" class="secondary">Delete</button>
+        </form>
+    </div>
+</div>
+
+<article>
+    <dl>
+        <dt>Age</dt>
+        <dd>{{ patient.age if patient.age is not none else "—" }}</dd>
+        <dt>Notes</dt>
+        <dd>{{ patient.notes if patient.notes else "—" }}</dd>
+        <dt>Created</dt>
+        <dd>{{ patient.created_at.strftime("%Y-%m-%d %H:%M") }}</dd>
+    </dl>
+</article>
+
+<section>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2>Scans</h2>
+        <button onclick="document.getElementById('upload-form').toggleAttribute('hidden')" class="outline">
+            Upload Scan
+        </button>
+    </div>
+
+    <div id="upload-form" hidden>
+        <article>
+            <h3>Upload New Scan</h3>
+            <form action="/scans/" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                <div class="grid">
+                    <label>
+                        MRI File
+                        <input type="file" name="file" accept=".jpg,.jpeg,.png,.nii,.nii.gz,.dcm" required>
+                    </label>
+                    <label>
+                        Scanner Vendor
+                        <select name="scanner_vendor">
+                            <option value="Unknown">Unknown</option>
+                            <option value="Philips">Philips</option>
+                            <option value="Siemens">Siemens</option>
+                            <option value="GE">GE</option>
+                        </select>
+                    </label>
+                    <label>
+                        Modality
+                        <select name="modality">
+                            <option value="T1">T1</option>
+                            <option value="T2">T2</option>
+                            <option value="FLAIR">FLAIR</option>
+                            <option value="T1ce">T1ce</option>
+                        </select>
+                    </label>
+                </div>
+                <button type="submit">Upload</button>
+                <button type="button" class="outline secondary"
+                        onclick="document.getElementById('upload-form').toggleAttribute('hidden')">
+                    Cancel
+                </button>
+            </form>
+        </article>
+    </div>
+
+    {% if scans %}
+    <figure>
+        <table>
+            <thead>
+                <tr>
+                    <th>Vendor</th>
+                    <th>Modality</th>
+                    <th>Harmonized</th>
+                    <th>Uploaded</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in scans %}
+                <tr>
+                    <td>{{ scan.scanner_vendor }}</td>
+                    <td>{{ scan.modality }}</td>
+                    <td>{{ "Yes" if scan.is_harmonized else "No" }}</td>
+                    <td>{{ scan.uploaded_at.strftime("%Y-%m-%d") }}</td>
+                    <td><a href="/scans/{{ scan.id }}">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </figure>
+    {% else %}
+    <p>No scans yet. Upload the first scan above.</p>
+    {% endif %}
+</section>
+{% endblock %}

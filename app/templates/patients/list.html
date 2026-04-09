@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Patients — MRI Platform{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>Patients</h1>
+    <a href="/patients/new" role="button">Add Patient</a>
+</div>
+
+{% if patients %}
+<figure>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Scans</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for patient in patients %}
+            <tr>
+                <td><a href="/patients/{{ patient.id }}">{{ patient.name }}</a></td>
+                <td>{{ patient.age if patient.age is not none else "—" }}</td>
+                <td>{{ patient.scans | length }}</td>
+                <td>{{ patient.created_at.strftime("%Y-%m-%d") }}</td>
+                <td>
+                    <a href="/patients/{{ patient.id }}/edit" role="button" class="outline" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</figure>
+{% else %}
+<p>No patients yet. <a href="/patients/new">Add the first patient.</a></p>
+{% endif %}
+{% endblock %}

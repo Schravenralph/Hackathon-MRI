@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{% if patient %}Edit {{ patient.name }}{% else %}New Patient{% endif %} — MRI Platform{% endblock %}
+
+{% block content %}
+<h1>{% if patient %}Edit Patient{% else %}New Patient{% endif %}</h1>
+
+<article style="max-width: 640px;">
+    <form method="post"
+          action="{% if patient %}/patients/{{ patient.id }}/edit{% else %}/patients/{% endif %}">
+        <label>
+            Name <span aria-label="required">*</span>
+            <input type="text" name="name" value="{{ patient.name if patient else '' }}"
+                   required placeholder="Full name">
+        </label>
+        <label>
+            Age
+            <input type="number" name="age" min="0" max="150"
+                   value="{{ patient.age if patient and patient.age is not none else '' }}"
+                   placeholder="Optional">
+        </label>
+        <label>
+            Notes
+            <textarea name="notes" rows="4"
+                      placeholder="Optional clinical notes">{{ patient.notes if patient and patient.notes else '' }}</textarea>
+        </label>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit">{% if patient %}Update{% else %}Create{% endif %}</button>
+            <a href="{% if patient %}/patients/{{ patient.id }}{% else %}/patients/{% endif %}"
+               role="button" class="outline secondary">Cancel</a>
+        </div>
+    </form>
+</article>
+{% endblock %}
