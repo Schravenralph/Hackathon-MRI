@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}MRI Platform — Home{% endblock %}
+{% block content %}
+<hgroup>
+    <h1>MRI Platform</h1>
+    <p>Scanner-agnostic harmonization & uncertainty visualization</p>
+</hgroup>
+<div class="grid">
+    <article>
+        <header>Patients</header>
+        <p>Manage patients and their MRI scans.</p>
+        <a href="/patients/" role="button">View Patients</a>
+    </article>
+    <article>
+        <header>Harmonization</header>
+        <p>Normalize scans across Philips, Siemens, and GE scanners.</p>
+    </article>
+    <article>
+        <header>Uncertainty</header>
+        <p>See where the model is confident vs. where it needs human eyes.</p>
+    </article>
+</div>
+{% endblock %}

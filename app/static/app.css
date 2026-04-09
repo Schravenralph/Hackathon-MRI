@@ -1,0 +1,33 @@
+footer {
+    margin-top: 2rem;
+    text-align: center;
+    opacity: 0.6;
+}
+
+.scan-image {
+    max-width: 100%;
+    border-radius: var(--pico-border-radius);
+}
+
+.overlay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.probability-bar {
+    height: 1.5rem;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.confidence-high { background-color: #4caf50; }
+.confidence-medium { background-color: #ff9800; }
+.confidence-low { background-color: #f44336; }
+
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator {
+    display: inline;
+}
