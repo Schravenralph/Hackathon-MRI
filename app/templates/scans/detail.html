@@ -75,6 +75,14 @@
     </aside>
 </div>
 
+{% if scan.is_harmonized %}
+<article>
+    <header>Intensity Histogram Comparison</header>
+    <img src="/scans/{{ scan.id }}/histogram" alt="Histogram comparison" class="scan-image">
+    <footer><small>Before vs after harmonization — aligned histograms mean consistent intensities</small></footer>
+</article>
+{% endif %}
+
 {% if predictions %}
 <section>
     <h2>Predictions</h2>

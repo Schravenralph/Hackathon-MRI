@@ -157,6 +157,15 @@ def _upload_scan_for_patient(client, patient_id: str) -> str:
     return response.headers["location"].split("/")[-1]
 
 
+def test_harmonize_scan(client):
+    patient_id = _create_test_patient(client)
+    scan_id = _upload_scan_for_patient(client, patient_id)
+    response = client.post(f"/scans/{scan_id}/harmonize", follow_redirects=False)
+    assert response.status_code == 303
+    response = client.get(f"/scans/{scan_id}")
+    assert response.status_code == 200
+
+
 def test_trigger_prediction(client, tmp_path):
     import torch
     from cancer_detection.model import BrainTumorClassifier
