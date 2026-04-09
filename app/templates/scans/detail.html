@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Scan — {{ patient.name }} — MRI Platform{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/patients/">Patients</a></li>
+        <li><a href="/patients/{{ patient.id }}">{{ patient.name }}</a></li>
+        <li>Scan {{ scan.id }}</li>
+    </ul>
+</nav>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>Scan Detail</h1>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="/viewer/{{ scan.id }}" role="button" class="outline">Open Viewer</a>
+        <form action="/scans/{{ scan.id }}/delete" method="post" style="margin: 0;"
+              onsubmit="return confirm('Delete this scan? This cannot be undone.');">
+            <button type="submit" class="secondary">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid">
+    <section>
+        <h2>Original Scan</h2>
+        <figure>
+            <img src="/scans/{{ scan.id }}/image" alt="Original scan" style="max-width: 100%; border-radius: 4px;">
+        </figure>
+
+        {% if scan.is_harmonized %}
+        <h2>Harmonized Scan</h2>
+        <figure>
+            <img src="/scans/{{ scan.id }}/harmonized-image" alt="Harmonized scan" style="max-width: 100%; border-radius: 4px;">
+        </figure>
+        {% endif %}
+    </section>
+
+    <aside>
+        <article>
+            <h2>Metadata</h2>
+            <dl>
+                <dt>Scanner Vendor</dt>
+                <dd>{{ scan.scanner_vendor }}</dd>
+                <dt>Modality</dt>
+                <dd>{{ scan.modality }}</dd>
+                <dt>Format</dt>
+                <dd>{{ scan.file_format }}</dd>
+                <dt>Harmonized</dt>
+                <dd>{{ "Yes" if scan.is_harmonized else "No" }}</dd>
+                <dt>Upload Date</dt>
+                <dd>{{ scan.uploaded_at.strftime("%Y-%m-%d %H:%M") }}</dd>
+            </dl>
+        </article>
+
+        <article>
+            <h2>Actions</h2>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% if not scan.is_harmonized %}
+                <form action="/scans/{{ scan.id }}/harmonize" method="post" style="margin: 0;">
+                    <button type="submit" style="width: 100%;">Harmonize</button>
+                </form>
+                {% endif %}
+
+                <form action="/predictions/" method="post" style="margin: 0;">
+                    <input type="hidden" name="scan_id" value="{{ scan.id }}">
+                    <button type="submit" class="outline" style="width: 100%;">Predict</button>
+                </form>
+
+                <form action="/predictions/?with_uncertainty=true" method="post" style="margin: 0;">
+                    <input type="hidden" name="scan_id" value="{{ scan.id }}">
+                    <button type="submit" class="outline" style="width: 100%;">Predict with Uncertainty</button>
+                </form>
+            </div>
+        </article>
+    </aside>
+</div>
+
+{% if predictions %}
+<section>
+    <h2>Predictions</h2>
+    {% for pred in predictions %}
+    <article>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>{{ pred.prediction_class }}</strong>
+                <span style="margin-left: 1rem; color: var(--pico-muted-color);">
+                    Confidence: {{ "%.1f"|format(pred.confidence * 100) }}%
+                </span>
+            </div>
+            <a href="/predictions/{{ pred.id }}" role="button" class="outline" style="margin: 0;">Detail</a>
+        </div>
+
+        {% for class_name, prob in pred.probabilities.items() %}
+        <div style="margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span>{{ class_name }}</span>
+                <span>{{ "%.1f"|format(prob * 100) }}%</span>
+            </div>
+            <progress value="{{ prob }}" max="1" style="margin: 0;"></progress>
+        </div>
+        {% endfor %}
+
+        <small style="color: var(--pico-muted-color);">
+            {{ pred.model_name }} &middot; {{ pred.created_at.strftime("%Y-%m-%d %H:%M") }}
+            {% if pred.ran_on_harmonized %}&middot; ran on harmonized{% endif %}
+        </small>
+    </article>
+    {% endfor %}
+</section>
+{% else %}
+<section>
+    <p>No predictions yet. Use the Predict action above.</p>
+</section>
+{% endif %}
+{% endblock %}
