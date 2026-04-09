@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Viewer — {{ scan.id }} — MRI Platform{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/patients/">Patients</a></li>
+        <li><a href="/patients/{{ scan.patient_id }}">Patient</a></li>
+        <li><a href="/scans/{{ scan.id }}">Scan</a></li>
+        <li>Viewer</li>
+    </ul>
+</nav>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>Multi-Panel Viewer</h1>
+    <a href="/scans/{{ scan.id }}" role="button" class="outline">Back to Scan</a>
+</div>
+
+<!-- Original + Harmonized side by side -->
+<section>
+    <h2>Scan Images</h2>
+    <div class="grid">
+        <article>
+            <header>Original Scan</header>
+            <figure>
+                <img src="/scans/{{ scan.id }}/image" alt="Original scan" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+            <footer>
+                <small>{{ scan.scanner_vendor }} &middot; {{ scan.modality }}</small>
+            </footer>
+        </article>
+
+        {% if scan.is_harmonized %}
+        <article>
+            <header>Harmonized Scan</header>
+            <figure>
+                <img src="/scans/{{ scan.id }}/harmonized-image" alt="Harmonized scan" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+            <footer>
+                <small>After harmonization</small>
+            </footer>
+        </article>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Histogram comparison -->
+{% if scan.is_harmonized %}
+<section>
+    <h2>Intensity Histogram Comparison</h2>
+    <article>
+        <figure>
+            <img src="/scans/{{ scan.id }}/histogram" alt="Histogram comparison" style="max-width: 100%; border-radius: 4px;">
+        </figure>
+        <footer>
+            <small>Before vs after harmonization — aligned histograms indicate consistent intensities across vendors</small>
+        </footer>
+    </article>
+</section>
+{% endif %}
+
+<!-- Predictions panels -->
+{% if predictions %}
+{% for prediction in predictions %}
+<section>
+    <h2>
+        Prediction: <strong>{{ prediction.prediction_class }}</strong>
+        <span style="font-weight: normal; font-size: 0.9rem; margin-left: 1rem; color: var(--pico-muted-color);">
+            {{ "%.1f"|format(prediction.confidence * 100) }}% confidence
+            &middot; {{ prediction.model_name }}
+            {% if prediction.ran_on_harmonized %}&middot; ran on harmonized{% endif %}
+        </span>
+    </h2>
+
+    <div class="grid">
+        <!-- Original scan reference -->
+        <article>
+            <header>Original Scan</header>
+            <figure>
+                <img src="/scans/{{ scan.id }}/image" alt="Original scan" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+        </article>
+
+        <!-- Grad-CAM overlay -->
+        {% if prediction.gradcam_path %}
+        <article>
+            <header>Grad-CAM Overlay</header>
+            <figure>
+                <img src="/predictions/{{ prediction.id }}/gradcam" alt="Grad-CAM overlay" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+            <footer>
+                <small>Heat map highlighting regions driving the prediction</small>
+            </footer>
+        </article>
+        {% endif %}
+    </div>
+
+    <!-- Per-class probabilities bar chart -->
+    <article>
+        <header>Per-Class Probabilities</header>
+        {% for class_name, prob in prediction.probabilities.items() %}
+        <div style="margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.2rem;">
+                <span>{{ class_name }}</span>
+                <span>{{ "%.1f"|format(prob * 100) }}%</span>
+            </div>
+            <progress value="{{ prob }}" max="1" style="margin: 0;"></progress>
+        </div>
+        {% endfor %}
+    </article>
+
+    <!-- Uncertainty panels -->
+    {% if prediction.uncertainty_map_path %}
+    <h3>Uncertainty Analysis (MC Dropout)</h3>
+    <div class="grid">
+        <article>
+            <header>Uncertainty Bar Chart</header>
+            <figure>
+                <img src="/predictions/{{ prediction.id }}/uncertainty-map" alt="Uncertainty bar chart" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+            <footer>
+                <small>Red = high variance (model unsure), Green = low variance (model confident)</small>
+            </footer>
+        </article>
+
+        <article>
+            <header>MC Dropout Violin Plot</header>
+            <figure>
+                <img src="/predictions/{{ prediction.id }}/uncertainty-violin" alt="MC Dropout violin plot" style="max-width: 100%; border-radius: 4px;">
+            </figure>
+            <footer>
+                <small>Spread of predictions across forward passes with dropout active</small>
+            </footer>
+        </article>
+    </div>
+    {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<section>
+    <article>
+        <p>No predictions yet. <a href="/scans/{{ scan.id }}">Return to the scan page</a> to run inference.</p>
+    </article>
+</section>
+{% endif %}
+{% endblock %}
