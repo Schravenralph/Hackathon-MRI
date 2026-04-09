@@ -45,6 +45,29 @@ def trigger_prediction(
     gradcam_file = scan_dir / "gradcam.png"
     Image.fromarray((result["gradcam_overlay"] * 255).astype(np.uint8)).save(gradcam_file)
 
+    uncertainty_map_path = None
+    if with_uncertainty:
+        from cancer_detection.preprocessing import preprocess_single
+        from uncertainty.mc_dropout import mc_dropout_predict
+        from uncertainty.heatmap import generate_uncertainty_bar_chart, generate_mc_dropout_visualization
+
+        input_tensor = preprocess_single(image.convert("RGB")).to(inference_service.device)
+        uc_result = mc_dropout_predict(
+            inference_service.model, input_tensor,
+            n_passes=settings.mc_dropout_passes,
+        )
+        display_names = list(settings.display_names.values())
+
+        bar_png = generate_uncertainty_bar_chart(uc_result["variance"], display_names)
+        bar_path = scan_dir / "uncertainty_bar.png"
+        bar_path.write_bytes(bar_png)
+
+        violin_png = generate_mc_dropout_visualization(uc_result["all_probs"], display_names)
+        violin_path = scan_dir / "uncertainty_violin.png"
+        violin_path.write_bytes(violin_png)
+
+        uncertainty_map_path = str(bar_path)
+
     prediction = Prediction(
         scan_id=scan_id,
         prediction_class=result["prediction_class"],
@@ -53,6 +76,7 @@ def trigger_prediction(
         gradcam_path=str(gradcam_file),
         ran_on_harmonized=scan.is_harmonized,
         inference_time_ms=result["inference_time_ms"],
+        uncertainty_map_path=uncertainty_map_path,
     )
     session.add(prediction)
     session.commit()
@@ -103,8 +127,13 @@ def prediction_uncertainty_map(
 
 
 @router.get("/predictions/{prediction_id}/uncertainty-violin")
-def prediction_uncertainty_violin(
-    prediction_id: UUID, session: Session = Depends(get_session)
-):
-    # Placeholder: will be populated by Task 14
-    raise HTTPException(status_code=404, detail="Uncertainty violin plot not available yet")
+def serve_uncertainty_violin(prediction_id: UUID, session: Session = Depends(get_session)):
+    from fastapi.responses import HTMLResponse
+
+    prediction = session.get(Prediction, prediction_id)
+    if not prediction or not prediction.uncertainty_map_path:
+        return HTMLResponse("Not found", status_code=404)
+    violin_path = Path(prediction.uncertainty_map_path).parent / "uncertainty_violin.png"
+    if not violin_path.exists():
+        return HTMLResponse("Not found", status_code=404)
+    return FileResponse(violin_path)

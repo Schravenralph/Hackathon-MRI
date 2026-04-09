@@ -65,25 +65,20 @@
 </section>
 
 {% if prediction.uncertainty_map_path %}
-<section>
+<h2>Uncertainty Analysis</h2>
+<p>MC Dropout uncertainty quantification — shows where the model is confident vs. unsure.</p>
+<div class="grid">
     <article>
-        <h2>Uncertainty Analysis</h2>
-        <div class="grid">
-            <div>
-                <h3>Uncertainty Map</h3>
-                <figure>
-                    <img src="/predictions/{{ prediction.id }}/uncertainty-map" alt="Uncertainty map" style="max-width: 100%; border-radius: 4px;">
-                </figure>
-            </div>
-            <div>
-                <h3>Uncertainty Distribution</h3>
-                <figure>
-                    <img src="/predictions/{{ prediction.id }}/uncertainty-violin" alt="Uncertainty violin plot" style="max-width: 100%; border-radius: 4px;">
-                </figure>
-            </div>
-        </div>
+        <header>Per-Class Uncertainty</header>
+        <img src="/predictions/{{ prediction.id }}/uncertainty-map" alt="Uncertainty bar chart" class="scan-image">
+        <footer><small>Red = high variance (model unsure), Green = low variance (model confident)</small></footer>
     </article>
-</section>
+    <article>
+        <header>MC Dropout Distribution</header>
+        <img src="/predictions/{{ prediction.id }}/uncertainty-violin" alt="MC Dropout violin plot" class="scan-image">
+        <footer><small>Spread of predictions across forward passes with dropout</small></footer>
+    </article>
+</div>
 {% endif %}
 
 <footer style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">

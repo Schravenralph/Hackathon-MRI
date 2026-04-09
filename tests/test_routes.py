@@ -2,6 +2,7 @@ import io
 
 import numpy as np
 import pytest
+import torch
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 from sqlmodel import Session, SQLModel, create_engine
@@ -187,3 +188,29 @@ def test_trigger_prediction(client, tmp_path):
     redirect_url = response.headers["location"]
     response = client.get(redirect_url)
     assert response.status_code == 200
+
+
+def test_prediction_with_uncertainty(client, tmp_path):
+    from cancer_detection.model import BrainTumorClassifier
+    from cancer_detection.inference import InferenceService
+    from app.config import settings
+
+    model = BrainTumorClassifier(num_classes=4)
+    weights_path = tmp_path / "weights" / "best_model.pth"
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"model_state_dict": model.state_dict()}, weights_path)
+    client.app.state.inference_service = InferenceService(weights_path)
+    settings.mc_dropout_passes = 5  # Fewer passes for test speed
+
+    patient_id = _create_test_patient(client)
+    scan_id = _upload_scan_for_patient(client, patient_id)
+
+    response = client.post(
+        f"/scans/{scan_id}/predict?with_uncertainty=true",
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    redirect_url = response.headers["location"]
+    response = client.get(redirect_url)
+    assert response.status_code == 200
+    assert "uncertainty" in response.text.lower() or "Uncertainty" in response.text
