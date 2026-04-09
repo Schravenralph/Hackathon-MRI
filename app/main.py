@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import init_db
 from app.deps import templates
-from app.routes import patients, scans
+from app.routes import patients, scans, predictions
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(patients.router)
 app.include_router(scans.router)
+app.include_router(predictions.router)
 
 
 @app.get("/")

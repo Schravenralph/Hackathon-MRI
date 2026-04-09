@@ -63,13 +63,11 @@
                 </form>
                 {% endif %}
 
-                <form action="/predictions/" method="post" style="margin: 0;">
-                    <input type="hidden" name="scan_id" value="{{ scan.id }}">
+                <form action="/scans/{{ scan.id }}/predict" method="post" style="margin: 0;">
                     <button type="submit" class="outline" style="width: 100%;">Predict</button>
                 </form>
 
-                <form action="/predictions/?with_uncertainty=true" method="post" style="margin: 0;">
-                    <input type="hidden" name="scan_id" value="{{ scan.id }}">
+                <form action="/scans/{{ scan.id }}/predict?with_uncertainty=true" method="post" style="margin: 0;">
                     <button type="submit" class="outline" style="width: 100%;">Predict with Uncertainty</button>
                 </form>
             </div>

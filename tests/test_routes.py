@@ -144,3 +144,37 @@ def test_delete_scan(client):
     scan_id = scan_url.split("/")[-1]
     response = client.post(f"/scans/{scan_id}/delete", follow_redirects=False)
     assert response.status_code == 303
+
+
+def _upload_scan_for_patient(client, patient_id: str) -> str:
+    img_bytes = _create_test_image_bytes()
+    response = client.post(
+        "/scans/",
+        data={"patient_id": patient_id, "scanner_vendor": "Siemens", "modality": "T1"},
+        files={"file": ("test.jpg", img_bytes, "image/jpeg")},
+        follow_redirects=False,
+    )
+    return response.headers["location"].split("/")[-1]
+
+
+def test_trigger_prediction(client, tmp_path):
+    import torch
+    from cancer_detection.model import BrainTumorClassifier
+    from cancer_detection.inference import InferenceService
+
+    model = BrainTumorClassifier(num_classes=4)
+    weights_path = tmp_path / "weights" / "best_model.pth"
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save({"model_state_dict": model.state_dict()}, weights_path)
+    client.app.state.inference_service = InferenceService(weights_path)
+
+    patient_id = _create_test_patient(client)
+    scan_id = _upload_scan_for_patient(client, patient_id)
+
+    response = client.post(
+        f"/scans/{scan_id}/predict", follow_redirects=False
+    )
+    assert response.status_code == 303
+    redirect_url = response.headers["location"]
+    response = client.get(redirect_url)
+    assert response.status_code == 200

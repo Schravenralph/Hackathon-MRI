@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction — {{ scan.id }} — MRI Platform{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ul>
+        <li><a href="/patients/">Patients</a></li>
+        <li><a href="/patients/{{ scan.patient_id }}">Patient</a></li>
+        <li><a href="/scans/{{ scan.id }}">Scan</a></li>
+        <li>Prediction</li>
+    </ul>
+</nav>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h1>Prediction Result</h1>
+    <a href="/scans/{{ scan.id }}" role="button" class="outline">Back to Scan</a>
+</div>
+
+<div class="grid">
+    <section>
+        <h2>Original Scan</h2>
+        <figure>
+            <img src="/scans/{{ scan.id }}/image" alt="Original scan" style="max-width: 100%; border-radius: 4px;">
+        </figure>
+    </section>
+
+    <section>
+        <h2>Grad-CAM Overlay</h2>
+        {% if prediction.gradcam_path %}
+        <figure>
+            <img src="/predictions/{{ prediction.id }}/gradcam" alt="Grad-CAM overlay" style="max-width: 100%; border-radius: 4px;">
+        </figure>
+        {% else %}
+        <p>No Grad-CAM overlay available.</p>
+        {% endif %}
+    </section>
+</div>
+
+<section>
+    <article>
+        <h2>Classification Result</h2>
+        <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 1rem;">
+            <div>
+                <strong style="font-size: 1.5rem;">{{ prediction.prediction_class }}</strong>
+            </div>
+            <div>
+                <span style="font-size: 1.25rem; color: var(--pico-primary);">
+                    {{ "%.1f"|format(prediction.confidence * 100) }}% confidence
+                </span>
+            </div>
+        </div>
+
+        <h3>Per-Class Probabilities</h3>
+        {% for class_name, prob in prediction.probabilities.items() %}
+        <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                <span>{{ class_name }}</span>
+                <span>{{ "%.1f"|format(prob * 100) }}%</span>
+            </div>
+            <progress value="{{ prob }}" max="1" style="margin: 0;"></progress>
+        </div>
+        {% endfor %}
+    </article>
+</section>
+
+{% if prediction.uncertainty_map_path %}
+<section>
+    <article>
+        <h2>Uncertainty Analysis</h2>
+        <div class="grid">
+            <div>
+                <h3>Uncertainty Map</h3>
+                <figure>
+                    <img src="/predictions/{{ prediction.id }}/uncertainty-map" alt="Uncertainty map" style="max-width: 100%; border-radius: 4px;">
+                </figure>
+            </div>
+            <div>
+                <h3>Uncertainty Distribution</h3>
+                <figure>
+                    <img src="/predictions/{{ prediction.id }}/uncertainty-violin" alt="Uncertainty violin plot" style="max-width: 100%; border-radius: 4px;">
+                </figure>
+            </div>
+        </div>
+    </article>
+</section>
+{% endif %}
+
+<footer style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--pico-muted-border-color);">
+    <small style="color: var(--pico-muted-color);">
+        {{ prediction.model_name }}
+        &middot; {{ prediction.inference_time_ms }} ms
+        &middot; {{ "Ran on harmonized" if prediction.ran_on_harmonized else "Ran on original" }}
+        &middot; {{ prediction.created_at.strftime("%Y-%m-%d %H:%M") }}
+    </small>
+</footer>
+{% endblock %}
