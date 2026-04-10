@@ -10,3 +10,5 @@ data/harmonized/
 data/weights/
 *.db
 .DS_Store
+kaggle.json
+.kaggle/

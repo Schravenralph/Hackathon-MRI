@@ -26,7 +26,10 @@ class InferenceService:
         checkpoint = torch.load(
             weights_path, map_location=self.device, weights_only=False
         )
-        self.model.load_state_dict(checkpoint["model_state_dict"])
+        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+        else:
+            self.model.load_state_dict(checkpoint)
         self.model.eval()
 
     def predict(self, image: Image.Image) -> dict:

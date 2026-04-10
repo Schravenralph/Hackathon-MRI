@@ -111,7 +111,8 @@ Patient
 Scan
   - id: UUID (primary key)
   - patient_id: FK -> Patient
-  - file_path: str (NIfTI/JPEG on disk)
+  - file_path: str (NIfTI for 3D volumetric, JPEG/PNG for 2D slices)
+  - file_format: str (nifti / jpeg / png) -- determines which pipeline branch to use
   - scanner_vendor: str (Philips / Siemens / GE / Unknown)
   - modality: str (T1 / T2 / FLAIR / T1ce)
   - is_harmonized: bool (default: false)
@@ -153,13 +154,19 @@ Classical preprocessing stack — no GAN training required, fully hackathon-scop
 ### Pipeline Steps
 
 ```
-Raw MRI Scan (NIfTI or JPEG)
+Raw MRI Scan
     |
     v
-1. Load (SimpleITK / nibabel)
+0. Format detection:
+   - NIfTI (.nii/.nii.gz): full 3D pipeline (steps 1-6)
+   - JPEG/PNG (2D slices, e.g. Kaggle dataset): simplified pipeline
+     (skip step 2, apply 2D histogram matching + intensity norm only)
     |
     v
-2. Brain mask extraction (if NIfTI: bet2 or simple thresholding)
+1. Load (SimpleITK for NIfTI / PIL for 2D images)
+    |
+    v
+2. Brain mask extraction (NIfTI only: bet2 or simple thresholding)
     |
     v
 3. Bias field correction -- N4ITK (SimpleITK)
