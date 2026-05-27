@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from PIL import Image
 from sqlmodel import Session
 
-from app.config import settings
 from app.database import get_session
 from app.models.scan import Scan
 from app.security import safe_db_path
