@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import get_session
 from app.deps import templates
 from app.models.scan import Scan
-from app.security import safe_filename, safe_join
+from app.security import safe_db_path, safe_filename, safe_join
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
@@ -71,29 +71,12 @@ def scan_detail(scan_id: UUID, request: Request, session: Session = Depends(get_
     )
 
 
-def _safe_db_path(stored: str) -> Path:
-    """Resolve a DB-stored path and confirm it lives under `upload_dir`.
-
-    All scan/prediction artefacts are written under `settings.upload_dir`
-    by trusted server code. Re-asserting that invariant here defends
-    against future bugs that would let a tampered DB row point outside.
-    """
-    upload_root = settings.upload_dir.resolve()
-    try:
-        resolved = Path(stored).resolve()
-    except (OSError, RuntimeError) as exc:
-        raise HTTPException(status_code=400, detail="Invalid stored path") from exc
-    if not (resolved == upload_root or upload_root in resolved.parents):
-        raise HTTPException(status_code=400, detail="Invalid stored path")
-    return resolved
-
-
 @router.get("/{scan_id}/image")
 def scan_image(scan_id: UUID, session: Session = Depends(get_session)):
     scan = session.get(Scan, scan_id)
     if not scan or not scan.file_path:
         raise HTTPException(status_code=404, detail="Scan image not found")
-    path = _safe_db_path(scan.file_path)
+    path = safe_db_path(scan.file_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Scan image file missing")
     return FileResponse(path)
@@ -104,7 +87,7 @@ def scan_harmonized_image(scan_id: UUID, session: Session = Depends(get_session)
     scan = session.get(Scan, scan_id)
     if not scan or not scan.harmonized_path:
         raise HTTPException(status_code=404, detail="Harmonized image not found")
-    path = _safe_db_path(scan.harmonized_path)
+    path = safe_db_path(scan.harmonized_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Harmonized image file missing")
     return FileResponse(path)

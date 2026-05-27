@@ -44,6 +44,25 @@ def safe_filename(raw: str | None, default: str = "scan") -> str:
     return name
 
 
+def safe_db_path(stored: str) -> Path:
+    """Resolve a DB-stored path and confirm it lives strictly under ``upload_dir``.
+
+    All scan/prediction artefacts are written under ``settings.upload_dir``
+    by trusted server code.  Re-asserting that invariant here defends
+    against future bugs that would let a tampered DB row point outside.
+    """
+    from app.config import settings
+
+    upload_root = settings.upload_dir.resolve()
+    try:
+        resolved = Path(stored).resolve()
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid stored path") from exc
+    if upload_root not in resolved.parents:
+        raise HTTPException(status_code=400, detail="Invalid stored path")
+    return resolved
+
+
 def safe_join(root: Path, *parts: str) -> Path:
     """Join `parts` onto `root` and ensure the result stays inside `root`.
 
