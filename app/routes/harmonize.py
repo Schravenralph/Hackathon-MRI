@@ -7,9 +7,24 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from PIL import Image
 from sqlmodel import Session
 
+from app.config import settings
 from app.database import get_session
 from app.models.scan import Scan
 from harmonization.pipeline import generate_comparison_histogram, harmonize_2d
+
+
+def _safe_under_uploads(stored: str):
+    """Reject DB-stored paths that escape `settings.upload_dir`."""
+    from fastapi import HTTPException
+
+    upload_root = settings.upload_dir.resolve()
+    try:
+        resolved = Path(stored).resolve()
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid stored path") from exc
+    if not (resolved == upload_root or upload_root in resolved.parents):
+        raise HTTPException(status_code=400, detail="Invalid stored path")
+    return resolved
 
 router = APIRouter(tags=["harmonization"])
 
@@ -20,11 +35,12 @@ def harmonize_scan(scan_id: UUID, session: Session = Depends(get_session)):
     if not scan:
         return HTMLResponse("Scan not found", status_code=404)
 
-    image = np.array(Image.open(scan.file_path).convert("RGB"))
+    scan_file = _safe_under_uploads(scan.file_path)
+    image = np.array(Image.open(scan_file).convert("RGB"))
     results = harmonize_2d(image, reference=None)
     harmonized = results["harmonized"]
 
-    scan_dir = Path(scan.file_path).parent
+    scan_dir = scan_file.parent
     harmonized_path = scan_dir / "harmonized.png"
 
     # Rescale to 0-255 for saving
@@ -55,7 +71,8 @@ def serve_histogram(scan_id: UUID, session: Session = Depends(get_session)):
     scan = session.get(Scan, scan_id)
     if not scan:
         return HTMLResponse("Not found", status_code=404)
-    histogram_path = Path(scan.file_path).parent / "histogram_comparison.png"
+    scan_file = _safe_under_uploads(scan.file_path)
+    histogram_path = scan_file.parent / "histogram_comparison.png"
     if not histogram_path.exists():
         return HTMLResponse("Not found", status_code=404)
     return FileResponse(histogram_path)
