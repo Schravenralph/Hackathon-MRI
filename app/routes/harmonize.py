@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from app.database import get_session
 from app.models.scan import Scan
+from app.security import safe_db_path
 from harmonization.pipeline import generate_comparison_histogram, harmonize_2d
 
 router = APIRouter(tags=["harmonization"])
@@ -20,11 +21,12 @@ def harmonize_scan(scan_id: UUID, session: Session = Depends(get_session)):
     if not scan:
         return HTMLResponse("Scan not found", status_code=404)
 
-    image = np.array(Image.open(scan.file_path).convert("RGB"))
+    scan_file = safe_db_path(scan.file_path)
+    image = np.array(Image.open(scan_file).convert("RGB"))
     results = harmonize_2d(image, reference=None)
     harmonized = results["harmonized"]
 
-    scan_dir = Path(scan.file_path).parent
+    scan_dir = scan_file.parent
     harmonized_path = scan_dir / "harmonized.png"
 
     # Rescale to 0-255 for saving
@@ -55,7 +57,8 @@ def serve_histogram(scan_id: UUID, session: Session = Depends(get_session)):
     scan = session.get(Scan, scan_id)
     if not scan:
         return HTMLResponse("Not found", status_code=404)
-    histogram_path = Path(scan.file_path).parent / "histogram_comparison.png"
+    scan_file = safe_db_path(scan.file_path)
+    histogram_path = scan_file.parent / "histogram_comparison.png"
     if not histogram_path.exists():
         return HTMLResponse("Not found", status_code=404)
     return FileResponse(histogram_path)

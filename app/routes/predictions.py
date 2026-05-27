@@ -13,6 +13,7 @@ from app.database import get_session
 from app.deps import templates
 from app.models.prediction import Prediction
 from app.models.scan import Scan
+from app.security import safe_db_path
 
 router = APIRouter(tags=["predictions"])
 
@@ -32,7 +33,8 @@ def trigger_prediction(
     if inference_service is None:
         raise HTTPException(status_code=503, detail="Inference service not available")
 
-    image_path = Path(scan.harmonized_path) if scan.is_harmonized and scan.harmonized_path else Path(scan.file_path)
+    raw_path = scan.harmonized_path if scan.is_harmonized and scan.harmonized_path else scan.file_path
+    image_path = safe_db_path(raw_path)
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Scan image file not found")
 
@@ -107,7 +109,7 @@ def prediction_gradcam(prediction_id: UUID, session: Session = Depends(get_sessi
     prediction = session.get(Prediction, prediction_id)
     if not prediction or not prediction.gradcam_path:
         raise HTTPException(status_code=404, detail="Grad-CAM image not found")
-    path = Path(prediction.gradcam_path)
+    path = safe_db_path(prediction.gradcam_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Grad-CAM file missing")
     return FileResponse(path, media_type="image/png")
@@ -120,7 +122,7 @@ def prediction_uncertainty_map(
     prediction = session.get(Prediction, prediction_id)
     if not prediction or not prediction.uncertainty_map_path:
         raise HTTPException(status_code=404, detail="Uncertainty map not found")
-    path = Path(prediction.uncertainty_map_path)
+    path = safe_db_path(prediction.uncertainty_map_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Uncertainty map file missing")
     return FileResponse(path, media_type="image/png")
@@ -133,7 +135,8 @@ def serve_uncertainty_violin(prediction_id: UUID, session: Session = Depends(get
     prediction = session.get(Prediction, prediction_id)
     if not prediction or not prediction.uncertainty_map_path:
         return HTMLResponse("Not found", status_code=404)
-    violin_path = Path(prediction.uncertainty_map_path).parent / "uncertainty_violin.png"
+    bar_path = safe_db_path(prediction.uncertainty_map_path)
+    violin_path = bar_path.parent / "uncertainty_violin.png"
     if not violin_path.exists():
         return HTMLResponse("Not found", status_code=404)
     return FileResponse(violin_path)
