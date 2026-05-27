@@ -146,3 +146,38 @@ def test_safe_join_rejects_escape(tmp_path):
     with pytest.raises(HTTPException) as exc:
         safe_join(root, "../escape.png")
     assert exc.value.status_code == 400
+
+
+def test_safe_db_path_strict_containment(tmp_path):
+    """safe_db_path must reject a stored path that resolves to exactly
+    `upload_root`. A legitimate row lives at `upload_root/<scan_id>/<file>`,
+    so equality would mean `.parent` (used by `serve_histogram` /
+    `serve_uncertainty_violin`) escapes the upload boundary by one level.
+    Regression for Bugbot finding on PR #1."""
+    from fastapi import HTTPException
+
+    from app.config import settings
+    from app.security import safe_db_path
+
+    # `safe_db_path` reads `settings.upload_dir` internally; point it at
+    # this test's tmp uploads dir.
+    settings.upload_dir = tmp_path / "uploads"
+    settings.upload_dir.mkdir()
+
+    # In-root file: OK.
+    artefact = settings.upload_dir / "abc" / "scan.png"
+    artefact.parent.mkdir()
+    artefact.touch()
+    assert safe_db_path(str(artefact)) == artefact.resolve()
+
+    # Exact-equal to upload_root: REJECT (would let `.parent` escape).
+    with pytest.raises(HTTPException) as exc_root:
+        safe_db_path(str(settings.upload_dir))
+    assert exc_root.value.status_code == 400
+
+    # Outside upload_root: REJECT.
+    outside = tmp_path / "leaked.txt"
+    outside.write_text("PHI")
+    with pytest.raises(HTTPException) as exc_out:
+        safe_db_path(str(outside))
+    assert exc_out.value.status_code == 400
